@@ -1,20 +1,9 @@
 package com.dam.examen
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,55 +11,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-data class Frase(var texto: String, var verdadero: Boolean)
-
-var frases: MutableList<Frase> = mutableListOf()
-var fraseActual: MutableState<Frase> = mutableStateOf(Frase("-", true))
-var cuentaAtras: MutableState<Int> = mutableStateOf(20)
-var puntuacion: MutableState<Int> = mutableStateOf(0)
-var state: State = State.WAITING
-
-enum class State {
-    PLAYING, WAITING
-}
-
-fun cargarFrases() {
-    frases.add(Frase("Rafael Nadal es uno de los mejores deportistas de la historia de españa", true))
-    frases.add(Frase("Hoy el barça metió 8 goles", false))
-    frases.add(Frase("Mañana es domingo", false))
-    frases.add(Frase("uno más uno es dos", true))
-    frases.add(Frase("dos mas dos son diez", false))
-    frases.add(Frase("las vacas vuelan", false))
-    frases.add(Frase("messi es de brazil", false))
-    frases.add(Frase("los humanos somos moluscos", true))
-    frases.add(Frase("Una semana tiene 7 días", true))
-    frases.add(Frase("España es el país más grande de Europa", false))
-
-    fraseActual.value = frases.random()
-}
-
 @Composable
-fun UserInterface() {
+fun IU(viewModel: MiViewModel) {
+    val iuScope = rememberCoroutineScope()
+
+    // Utilizamos LaunchedEffect para iniciar el juego cuando la IU es mostrada
+    LaunchedEffect(Unit) {
+        viewModel.iniciarJuego(iuScope)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        BotonStart()
+        BotonIniciar(viewModel, iuScope)
         Spacer(modifier = Modifier.height(16.dp))
-        CuentaAtras()
+        CuentaAtras(viewModel)
         Spacer(modifier = Modifier.height(16.dp))
-        FraseVF()
+        FraseVF(viewModel)
         Spacer(modifier = Modifier.height(16.dp))
-        Puntuacion()
+        Puntuacion(viewModel)
     }
 }
+
 @Composable
-fun BotonStart() {
-    val iuScope = rememberCoroutineScope()
+fun BotonIniciar(viewModel: MiViewModel, iuScope: CoroutineScope) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -79,76 +48,64 @@ fun BotonStart() {
     ) {
         Button(
             onClick = {
-                if (state == State.WAITING) {
-                    cuentaAtras.value = 20
-                    puntuacion.value = 0
-                    iuScope.launch {
-                        state = State.PLAYING
-                        while (cuentaAtras.value > 0) {
-                            delay(1000)
-                            cuentaAtras.value -= 1
-                        }
-                        state = State.WAITING
-                    }
-                    cargarFrases()
-                }
+                viewModel.iniciarJuego(iuScope)
             }
         ) {
-            Text(text = "Start")
+            Text(text = "Iniciar")
         }
     }
 }
 
 @Composable
-fun CuentaAtras() {
+fun CuentaAtras(viewModel: MiViewModel) {
     Text(
-        text = "Cuenta atras:",
+        text = "Cuenta atrás:",
         fontSize = 20.sp,
         fontWeight = FontWeight.Bold
     )
     Text(
-        text = cuentaAtras.value.toString(),
+        text = viewModel.cuentaAtras.toString(),
         fontSize = 50.sp,
         fontWeight = FontWeight.Bold
     )
 }
+
 @Composable
-fun FraseVF() {
-    Frase()
+fun FraseVF(viewModel: MiViewModel) {
+    Frase(viewModel)
     Spacer(modifier = Modifier.height(16.dp))
-    BotonesFalsoVerdadero()
+    BotonesFalsoVerdadero(viewModel)
 }
 
 @Composable
-fun Frase() {
+fun Frase(viewModel: MiViewModel) {
     Text(
-        text = fraseActual.value.texto,
+        text = viewModel.fraseActual.texto,
         fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth()
     )
 }
+
 @Composable
-fun BotonesFalsoVerdadero() {
+fun BotonesFalsoVerdadero(viewModel: MiViewModel) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
     ) {
-        BotonFV(true)
-        Spacer(modifier = Modifier.width(16.dp)) // Añade un espacio entre los elementos
-        BotonFV(false)
+        BotonFV(true, viewModel)
+        Spacer(modifier = Modifier.width(16.dp))
+        BotonFV(false, viewModel)
     }
 }
 
 @Composable
-fun BotonFV(respuesta: Boolean) {
+fun BotonFV(respuesta: Boolean, viewModel: MiViewModel) {
     Button(
         onClick = {
-            if (state == State.PLAYING) {
-                ComprobarFrase(respuesta)
-            }
+            viewModel.comprobarRespuesta(respuesta)
         },
         modifier = Modifier
             .padding(end = 10.dp)
@@ -158,22 +115,10 @@ fun BotonFV(respuesta: Boolean) {
 }
 
 @Composable
-fun Puntuacion() {
+fun Puntuacion(viewModel: MiViewModel) {
     Text(
-        text = "Puntuación: ${puntuacion.value}",
+        text = "Puntuación: ${viewModel.puntuacion}",
         fontSize = 20.sp,
         fontWeight = FontWeight.Bold
     )
-}
-
-fun ComprobarFrase(respuesta: Boolean) {
-    if (respuesta == fraseActual.value.verdadero) {
-        puntuacion.value += 10
-    } else {
-        puntuacion.value -= 5
-        if (puntuacion.value < 0) {
-            puntuacion.value = 0
-        }
-    }
-    cargarFrases()
 }
